@@ -74,29 +74,17 @@ Index: AWSCodeOSS/build/private/code-editor-src/src/vs/code/browser/workbench/wo
 ===================================================================
 --- AWSCodeOSS.orig/build/private/code-editor-src/src/vs/code/browser/workbench/workbench.ts
 +++ AWSCodeOSS/build/private/code-editor-src/src/vs/code/browser/workbench/workbench.ts
-@@ -472,19 +472,25 @@ class WorkspaceProvider implements IWork
+@@ -472,6 +472,24 @@ class WorkspaceProvider implements IWork
  
  		const targetHref = this.createTargetUrl(workspace, options);
  		if (targetHref) {
--			if (options?.reuse) {
--				mainWindow.location.href = targetHref;
--				return true;
--			} else {
--				let result;
--				if (isStandalone()) {
--					result = mainWindow.open(targetHref, '_blank', 'toolbar=no'); // ensures to open another 'standalone' window!
--				} else {
--					result = mainWindow.open(targetHref);
--				}
-+			var url = new URL(targetHref);
- 
--				return !!result;
-+
++			// post an event to the parent iframe
++			const url = new URL(targetHref);
 +			let target, features;
 +			if (!options?.reuse && isStandalone()) {
 +				target = '_blank';
 +				features = 'toolbar=no';
- 			}
++			}
 +			mainWindow.top?.postMessage({
 +				source: 'code-editor',
 +				action: "openEditor",
@@ -107,10 +95,10 @@ Index: AWSCodeOSS/build/private/code-editor-src/src/vs/code/browser/workbench/wo
 +				features
 +			}, '*');
 +
-+			return true;
- 		}
- 		return false;
- 	}
++			// try opening a folder in case VS Code is not embedded
+ 			if (options?.reuse) {
+ 				mainWindow.location.href = targetHref;
+ 				return true;
 Index: AWSCodeOSS/build/private/code-editor-src/src/vs/workbench/browser/workbench.ts
 ===================================================================
 --- AWSCodeOSS.orig/build/private/code-editor-src/src/vs/workbench/browser/workbench.ts
