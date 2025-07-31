@@ -21,6 +21,7 @@ web-server/embedding-events.diff
 web-server/proxy-uri.diff
 web-server/display-language.diff
 web-server/signature-verification.diff
+sagemaker/update-csp.diff
 sagemaker/sagemaker-extension.diff
 sagemaker/terminal-crash-mitigation.diff
 sagemaker/sagemaker-open-notebook-extension.diff
@@ -29,4 +30,5 @@ sagemaker/sagemaker-extension-smus-support.diff
 sagemaker/post-startup-notifications.diff
 sagemaker/sagemaker-extensions-sync.diff
 sagemaker/sagemaker-ui-post-startup.diff
+sagemaker/sagemaker-integration.diff
 sagemaker/sagemaker-idle-extension.diff
