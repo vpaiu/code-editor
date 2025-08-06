@@ -3,23 +3,23 @@
 set -euo pipefail
 
 apply_changes() {
-
-    # Use custom path if provided, otherwise default to ./vscode
-    local patched_src_dir="${1:-$(pwd)/vscode}"
+    local present_working_dir="$(pwd)"
+    local patched_src_dir="$present_working_dir/code-editor-src"
     echo "Creating patched source in directory: ${patched_src_dir}"
 
-    code_editor_module_path="$(dirname "$(dirname "${BASH_SOURCE[0]}")")"
-    patch_dir="${code_editor_module_path}/patches"
+    patch_dir="${present_working_dir}/patches"
+    echo "Set patch directory as: $patch_dir"
 
     export QUILT_PATCHES="${patch_dir}"
-    export QUILT_SERIES="web-server.series"
+    export QUILT_SERIES="${present_working_dir}/patches/sagemaker.series"
 
     # Clean out the build directory
     echo "Cleaning build src dir"
     rm -rf "${patched_src_dir}"
 
     # Copy third party source
-    rsync -a "${code_editor_module_path}/third-party-src/" "${patched_src_dir}"
+    echo "Copying third party source to the patch directory"
+    rsync -a "${present_working_dir}/third-party-src/" "${patched_src_dir}"
 
     echo "Applying base patches"
     pushd "${patched_src_dir}"
@@ -27,31 +27,7 @@ apply_changes() {
     popd
 
     echo "Applying overrides"
-    rsync -a "${code_editor_module_path}/overrides/" "${patched_src_dir}"
-
+    rsync -a "${present_working_dir}/overrides/" "${patched_src_dir}"
 }
 
-custom_path=""
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        --path)
-            if [[ -z "${2:-}" ]]; then
-                echo "Error: --path requires a value"
-                exit 1
-            fi
-            custom_path="$2"
-            shift 2
-            ;;
-        -h|--help)
-            echo "Usage: $0 [--path <directory>]"
-            echo "  --path: Custom build directory (default: ./vscode)"
-            exit 0
-            ;;
-        *)
-            echo "Invalid parameter - '$1'"
-            echo "Use --help for usage information"
-            exit 1
-            ;;
-    esac
-done
-apply_changes "${custom_path}"
+apply_changes
