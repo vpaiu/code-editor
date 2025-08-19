@@ -11,18 +11,25 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      staging-branch: ${{ env.STAGING_BRANCH }}
     steps:
       - name: Setup environment
         run: |
           echo "Installing required dependencies"
           sudo apt-get update
-          sudo apt-get install -y quilt libxml2-utils jq
+          sudo apt-get install -y quilt libxml2-utils jq libkrb5-dev libx11-dev libxkbfile-dev
           
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: true
+          
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           
       - name: Get latest semver branch
         run: |
@@ -80,10 +87,6 @@ jobs:
             git checkout "$LATEST_TAG"
             cd ..
             
-            # Configure git user and commit changes if needed
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            
             git add third-party-src
             if git diff --staged --quiet; then
               echo "No changes to commit, submodule already up to date"
@@ -92,6 +95,7 @@ jobs:
               git push origin "$STAGING_BRANCH"
             fi
             
+            echo "STAGING_BRANCH=$STAGING_BRANCH" >> $GITHUB_ENV
             echo "Created staging branch: $STAGING_BRANCH with VS Code $LATEST_TAG"
           fi
           
@@ -127,10 +131,87 @@ jobs:
             echo "All targets rebased successfully"
           fi
           
+          # Commit rebased patches if any changes
+          git add patches/
+          if ! git diff --staged --quiet; then
+            git commit -m "Rebase patches for all targets"
+            git push origin "$STAGING_BRANCH"
+          fi
+
+  update-package-locks:
+    name: Update Package Locks
+    runs-on: ubuntu-latest
+    needs: update-automation
+    if: needs.update-automation.outputs.staging-branch != ''
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        target: [code-editor-server, code-editor-sagemaker-server, code-editor-web-embedded, code-editor-web-embedded-with-terminal]
+    steps:
+      - name: Setup environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y quilt libxml2-utils jq libkrb5-dev libx11-dev libxkbfile-dev
+          
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.update-automation.outputs.staging-branch }}
+          fetch-depth: 0
+          submodules: true
+          
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+      - name: Update package-lock for target
+        run: |
+          OVERRIDE_PATH=$(jq -r '."package-lock-overrides".path' "configuration/${{ matrix.target }}.json")
+          
+          ./scripts/prepare-src.sh "${{ matrix.target }}"
+          
+          cd code-editor-src
+          npm install
+          cd ..
+          
+          rm -rf "$OVERRIDE_PATH"
+          mkdir -p "$OVERRIDE_PATH"
+          
+          find code-editor-src -name "package-lock.json" -type f | while read -r file; do
+            rel_path="${file#code-editor-src/}"
+            third_party_file="third-party-src/$rel_path"
+            
+            if [ ! -f "$third_party_file" ] || ! cmp -s "$file" "$third_party_file"; then
+              dest_dir="$OVERRIDE_PATH/$(dirname "$rel_path")"
+              mkdir -p "$dest_dir"
+              cp "$file" "$dest_dir/"
+              echo "Copied updated $rel_path to $OVERRIDE_PATH"
+            fi
+          done
+          
+          rm -rf code-editor-src
+          
+      - name: Commit package-lock overrides
+        run: |
+          git add package-lock-overrides/
+          if ! git diff --staged --quiet; then
+            git commit -m "Update package-lock.json overrides for ${{ matrix.target }}"
+            
+            # Retry push with rebase until successful
+            for i in {1..5}; do
+              if git pull --rebase origin "${{ needs.update-automation.outputs.staging-branch }}" && git push origin "${{ needs.update-automation.outputs.staging-branch }}"; then
+                break
+              fi
+              sleep $((i * 2))
+            done
+          fi
+          
   handle-failures:
     name: Handle Failures
     runs-on: ubuntu-latest
-    needs: update-automation
+    needs: [update-automation, update-package-locks]
     if: failure()
     steps:
       - name: Report rebase failures
