@@ -15,7 +15,7 @@ generate_oss_attribution() {
     local code_oss_third_party_licenses=$(cat "$THIRD_PARTY_SRC_DIR/ThirdPartyNotices.txt")
     additional_third_party_licenses=$(cat "$ROOT_DIR/build-tools/oss-attribution/additional-third-party-licenses.txt")
 
-    npx --yes --package oss-attribution-generator@1.7.1 -- generate-attribution --baseDir "$BUILD_SRC_DIR" --outputDir "$oss_attribution_dir"
+    npx --yes --package @electrovir/oss-attribution-generator -- generate-attribution --baseDir "$BUILD_SRC_DIR" --outputDir "$oss_attribution_dir"
     attribution_licenses=$(cat "$oss_attribution_dir/attribution.txt")
 
     read_status=0
@@ -90,7 +90,7 @@ generate_unified_oss_attribution() {
     echo "Generating unified OSS attribution for all targets"
     mkdir -p "$BUILD_DIR/private/oss-attribution"
     
-    npx --yes --package oss-attribution-generator@1.7.1 -- generate-attribution \
+    npx --yes --package @electrovir/oss-attribution-generator -- generate-attribution \
         -b "${target_dirs[0]}" "${target_dirs[1]}" "${target_dirs[2]}" "${target_dirs[3]}" \
         --outputDir "$BUILD_DIR/private/oss-attribution"
     
