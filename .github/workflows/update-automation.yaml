@@ -142,6 +142,7 @@ jobs:
       - name: Generate OSS attribution
         run: |
           npm i -g license-checker
+          chmod +x ./scripts/generate-oss-attribution.sh
           ./scripts/generate-oss-attribution.sh --command generate_unified_oss_attribution
 
   update-package-locks:
