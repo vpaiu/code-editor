@@ -67,6 +67,9 @@ generate_unified_oss_attribution() {
         local excluded_packages=""
         if [[ -f "$ROOT_DIR/build-tools/oss-attribution/excluded-packages.txt" ]]; then
             excluded_packages=$(tr '\n' ';' < "$ROOT_DIR/build-tools/oss-attribution/excluded-packages.txt" | sed 's/;$//')
+            echo "Found excluded packages file with packages: $excluded_packages"
+        else
+            echo "No excluded packages file found at: $ROOT_DIR/build-tools/oss-attribution/excluded-packages.txt"
         fi
         
         local output
