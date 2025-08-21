@@ -43,15 +43,7 @@ jobs:
           echo "LATEST_SEMVER=$LATEST_SEMVER" >> $GITHUB_ENV
           echo "Using branch: $LATEST_SEMVER"
           git checkout "$LATEST_SEMVER"
-          git submodule update --init --recursive
-
-      - name: Cache npm dependencies
-        uses: actions/cache@v4
-        with:
-          path: '**/node_modules'
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-    
+          git submodule update --init --recursive  
 
       - name: Check if update needed
         env:

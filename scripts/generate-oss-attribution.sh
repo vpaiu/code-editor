@@ -96,7 +96,7 @@ generate_unified_oss_attribution() {
         mv "$ROOT_DIR/code-editor-src" "$ROOT_DIR/code-editor-src-$target"
         cd "$ROOT_DIR/code-editor-src-$target"
         npm config set cache "$ROOT_DIR/.npm-cache"
-        npm install
+        npm install --prefer-offline 
         cd "$ROOT_DIR"
         
         check_unapproved_licenses "$target" "$ROOT_DIR/code-editor-src-$target"
