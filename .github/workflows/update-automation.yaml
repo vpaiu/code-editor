@@ -197,7 +197,7 @@ jobs:
       - name: Upload prepared source as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ github.sha }}-prepared-source-${{ matrix.target }}
+          name: ${{ github.run_id }}-prepared-source-${{ matrix.target }}
           path: code-editor-src/
           retention-days: 1
           
@@ -224,6 +224,7 @@ jobs:
     permissions:
       contents: write
     steps:
+          
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -243,14 +244,14 @@ jobs:
       - name: Download prepared sources from artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: ${{ github.sha }}-prepared-source-*
+          pattern: ${{ github.run_id }}-prepared-source-*
           merge-multiple: false
           
       - name: Organize downloaded sources
         run: |
           for target in code-editor-server code-editor-sagemaker-server code-editor-web-embedded code-editor-web-embedded-with-terminal; do
-            if [[ -d "${{ github.sha }}-prepared-source-$target" ]]; then
-              mv "${{ github.sha }}-prepared-source-$target" "code-editor-src-$target"
+            if [[ -d "${{ github.run_id }}-prepared-source-$target" ]]; then
+              mv "${{ github.run_id }}-prepared-source-$target" "code-editor-src-$target"
               echo "Organized prepared source for $target"
             else
               echo "Missing prepared source artifact for target: $target"
@@ -290,5 +291,3 @@ jobs:
         run: |
           # TODO: Implement metric reporting to CW.
           exit 1
-            
-    
