@@ -199,14 +199,17 @@ jobs:
             fi
           done
           
-          # Create tar archive of prepared source
-          tar -czf "code-editor-src-${{ matrix.target }}.tar.gz" code-editor-src
-          rm -rf code-editor-src
+          # Move to target-specific directory and clean git metadata
+          mv code-editor-src "code-editor-src-${{ matrix.target }}"
           
-      - name: Commit package-lock overrides and prepared source archive
+          # Remove all git-related files and directories to prevent submodule detection
+          find "code-editor-src-${{ matrix.target }}" -name ".git*" -exec rm -rf {} + 2>/dev/null || true
+          find "code-editor-src-${{ matrix.target }}" -name ".git" -type d -exec rm -rf {} + 2>/dev/null || true
+          
+      - name: Commit package-lock overrides and prepared source
         run: |
           git add package-lock-overrides/
-          git add "code-editor-src-${{ matrix.target }}.tar.gz"
+          git add --force "code-editor-src-${{ matrix.target }}"
           if ! git diff --staged --quiet; then
             git commit -m "Update package-lock.json overrides and prepared source for ${{ matrix.target }}"
             
@@ -253,15 +256,13 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
-      - name: Extract prepared sources from archives
+      - name: Verify prepared sources exist
         run: |
           for target in code-editor-server code-editor-sagemaker-server code-editor-web-embedded code-editor-web-embedded-with-terminal; do
-            if [[ -f "code-editor-src-$target.tar.gz" ]]; then
-              echo "Extracting prepared source for $target"
-              tar -xzf "code-editor-src-$target.tar.gz"
-              mv code-editor-src "code-editor-src-$target"
+            if [[ -d "code-editor-src-$target" ]]; then
+              echo "Found prepared source for target: $target"
             else
-              echo "Missing prepared source archive for target: $target"
+              echo "Missing prepared source for target: $target"
               exit 1
             fi
           done
@@ -283,13 +284,12 @@ jobs:
             git push origin "${{ needs.update-automation.outputs.staging-branch }}"
           fi
           
-      - name: Clean up prepared source directories and archives
+      - name: Clean up prepared source directories
         run: |
           rm -rf code-editor-src-*
-          rm -f code-editor-src-*.tar.gz
           git add -A
           if ! git diff --staged --quiet; then
-            git commit -m "Clean up prepared source directories and archives"
+            git commit -m "Clean up prepared source directories"
             git push origin "${{ needs.update-automation.outputs.staging-branch }}"
           fi
           
