@@ -202,6 +202,9 @@ jobs:
           # Move prepared source to target-specific directory
           mv code-editor-src "code-editor-src-${{ matrix.target }}"
           
+          # Remove .git directories to prevent submodule issues
+          find "code-editor-src-${{ matrix.target }}" -name ".git" -type d -exec rm -rf {} + 2>/dev/null || true
+          
       - name: Commit package-lock overrides and prepared source
         run: |
           git add package-lock-overrides/
