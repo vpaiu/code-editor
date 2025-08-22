@@ -199,16 +199,14 @@ jobs:
             fi
           done
           
-          # Move prepared source to target-specific directory
-          mv code-editor-src "code-editor-src-${{ matrix.target }}"
+          # Create tar archive of prepared source
+          tar -czf "code-editor-src-${{ matrix.target }}.tar.gz" code-editor-src
+          rm -rf code-editor-src
           
-          # Remove .git directories to prevent submodule issues
-          find "code-editor-src-${{ matrix.target }}" -name ".git" -type d -exec rm -rf {} + 2>/dev/null || true
-          
-      - name: Commit package-lock overrides and prepared source
+      - name: Commit package-lock overrides and prepared source archive
         run: |
           git add package-lock-overrides/
-          git add --force "code-editor-src-${{ matrix.target }}"
+          git add "code-editor-src-${{ matrix.target }}.tar.gz"
           if ! git diff --staged --quiet; then
             git commit -m "Update package-lock.json overrides and prepared source for ${{ matrix.target }}"
             
@@ -255,22 +253,18 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
-      - name: Verify prepared sources exist
+      - name: Extract prepared sources from archives
         run: |
-          MISSING_TARGETS=()
           for target in code-editor-server code-editor-sagemaker-server code-editor-web-embedded code-editor-web-embedded-with-terminal; do
-            if [[ ! -d "code-editor-src-$target" ]]; then
-              echo "Missing prepared source for target: $target"
-              MISSING_TARGETS+=("$target")
+            if [[ -f "code-editor-src-$target.tar.gz" ]]; then
+              echo "Extracting prepared source for $target"
+              tar -xzf "code-editor-src-$target.tar.gz"
+              mv code-editor-src "code-editor-src-$target"
             else
-              echo "Found prepared source for target: $target"
+              echo "Missing prepared source archive for target: $target"
+              exit 1
             fi
           done
-          
-          if [[ ${#MISSING_TARGETS[@]} -gt 0 ]]; then
-            echo "Missing prepared sources for targets: ${MISSING_TARGETS[*]}"
-            exit 1
-          fi
           
       - name: Generate unified OSS attribution
         run: |
@@ -289,12 +283,13 @@ jobs:
             git push origin "${{ needs.update-automation.outputs.staging-branch }}"
           fi
           
-      - name: Clean up prepared source directories
+      - name: Clean up prepared source directories and archives
         run: |
           rm -rf code-editor-src-*
+          rm -f code-editor-src-*.tar.gz
           git add -A
           if ! git diff --staged --quiet; then
-            git commit -m "Clean up prepared source directories"
+            git commit -m "Clean up prepared source directories and archives"
             git push origin "${{ needs.update-automation.outputs.staging-branch }}"
           fi
           
