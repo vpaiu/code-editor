@@ -6,4 +6,5 @@ build-artifacts
 build-private
 code-editor-src
 vscode-reh-web-*
-code-editor-src-*
+code-editor-src-*/
+!code-editor-src-*.tar.gz
