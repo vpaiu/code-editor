@@ -84,7 +84,7 @@ jobs:
             echo "Updating submodule to $LATEST_TAG"
             cd third-party-src
             git fetch --tags
-            git checkout "$LATEST_TAG"
+            git checkout "$CURRENT_TAG"
             cd ..
             
             git add third-party-src
