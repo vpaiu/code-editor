@@ -165,16 +165,22 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          
-      - name: Update package-lock for target
+      
+      - name: Build target
         run: |
-          OVERRIDE_PATH=$(jq -r '."package-lock-overrides".path' "configuration/${{ matrix.target }}.json")
-          
           ./scripts/prepare-src.sh "${{ matrix.target }}"
           
           cd code-editor-src
           npm install
           cd ..
+
+          ./scripts/build-artifacts.sh ${{ matrix.target }}
+
+          echo "Built target: ${{ matrix.target }}"
+    
+      - name: Update package-lock for target
+        run: |
+          OVERRIDE_PATH=$(jq -r '."package-lock-overrides".path' "configuration/${{ matrix.target }}.json")
           
           rm -rf "$OVERRIDE_PATH"
           mkdir -p "$OVERRIDE_PATH"
