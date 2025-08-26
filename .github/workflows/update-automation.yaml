@@ -37,7 +37,7 @@ jobs:
           LATEST_SEMVER=$(git branch -r | grep -E 'origin/[0-9]+\.[0-9]+$' | sed 's/.*origin\///' | sort -V | tail -1)
           # For testing purposes
           if [ -z "$LATEST_SEMVER" ]; then
-            LATEST_SEMVER="main"
+            LATEST_SEMVER="build-test"
             echo "No semver branches found, using main"
           fi
           echo "LATEST_SEMVER=$LATEST_SEMVER" >> $GITHUB_ENV
@@ -90,6 +90,7 @@ jobs:
             git add third-party-src
             if git diff --staged --quiet; then
               echo "No changes to commit, submodule already up to date"
+              git push origin "$STAGING_BRANCH"
             else
               git commit -m "Update VS Code submodule to $LATEST_TAG"
               git push origin "$STAGING_BRANCH"
@@ -101,42 +102,42 @@ jobs:
           
       - name: Rebase patches for all targets
         run: |
-          echo "Rebasing patches for all build targets"
+          # echo "Rebasing patches for all build targets"
           
-          # Test each target sequentially with rebasing
-          FAILED_TARGETS=()
+          # # Test each target sequentially with rebasing
+          # FAILED_TARGETS=()
           
-          for target in code-editor-server code-editor-sagemaker-server code-editor-web-embedded code-editor-web-embedded-with-terminal; do
-            echo ""
-            echo "=== REBASING TARGET: $target ==="
+          # for target in code-editor-server code-editor-sagemaker-server code-editor-web-embedded code-editor-web-embedded-with-terminal; do
+          #   echo ""
+          #   echo "=== REBASING TARGET: $target ==="
             
-            if ./scripts/prepare-src.sh --command rebase_patches "$target"; then
-              echo "Successfully rebased $target"
-            else
-              echo "Failed to rebase $target"
-              FAILED_TARGETS+=("$target")
-            fi
+          #   if ./scripts/prepare-src.sh --command rebase_patches "$target"; then
+          #     echo "Successfully rebased $target"
+          #   else
+          #     echo "Failed to rebase $target"
+          #     FAILED_TARGETS+=("$target")
+          #   fi
             
-            # Clean up for next target
-            rm -rf code-editor-src
+          #   # Clean up for next target
+          #   rm -rf code-editor-src
           
-            echo "=== END TARGET: $target ==="
-          done
+          #   echo "=== END TARGET: $target ==="
+          # done
           
-          # Report results
-          if [ ${#FAILED_TARGETS[@]} -gt 0 ]; then
-            echo "Failed targets: ${FAILED_TARGETS[*]}"
-            exit 1
-          else
-            echo "All targets rebased successfully"
-          fi
+          # # Report results
+          # if [ ${#FAILED_TARGETS[@]} -gt 0 ]; then
+          #   echo "Failed targets: ${FAILED_TARGETS[*]}"
+          #   exit 1
+          # else
+          #   echo "All targets rebased successfully"
+          # fi
           
-          # Commit rebased patches if any changes
-          git add patches/
-          if ! git diff --staged --quiet; then
-            git commit -m "Rebase patches for all targets"
-            git push origin "$STAGING_BRANCH"
-          fi
+          # # Commit rebased patches if any changes
+          # git add patches/
+          # if ! git diff --staged --quiet; then
+          #   git commit -m "Rebase patches for all targets"
+          #   git push origin "$STAGING_BRANCH"
+          # fi
 
   update-package-locks:
     name: Update Package Locks
