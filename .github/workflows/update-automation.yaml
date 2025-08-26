@@ -138,8 +138,8 @@ jobs:
             git push origin "$STAGING_BRANCH"
           fi
 
-  update-package-locks:
-    name: Update Package Locks
+  build-and-test:
+    name: Build and Test Targets
     runs-on: ubuntu-latest
     needs: update-automation
     if: needs.update-automation.outputs.staging-branch != ''
@@ -222,7 +222,7 @@ jobs:
   generate-oss-attribution:
     name: Generate OSS Attribution
     runs-on: ubuntu-latest
-    needs: [update-automation, update-package-locks]
+    needs: [update-automation, build-and-test]
     if: needs.update-automation.outputs.staging-branch != ''
     permissions:
       contents: write
@@ -286,7 +286,7 @@ jobs:
   handle-failures:
     name: Handle Failures
     runs-on: ubuntu-latest
-    needs: [update-automation, update-package-locks, generate-oss-attribution]
+    needs: [update-automation, build-and-test, generate-oss-attribution]
     if: failure()
     steps:
       - name: Report rebase failures
