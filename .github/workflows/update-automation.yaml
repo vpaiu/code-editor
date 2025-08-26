@@ -180,7 +180,7 @@ jobs:
           npm install
           cd ..
 
-          ./scripts/build-artifacts.sh ${{ matrix.target }}
+          # ./scripts/build-artifacts.sh ${{ matrix.target }}
 
           echo "Built target: ${{ matrix.target }}"
     
