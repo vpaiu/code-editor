@@ -347,7 +347,7 @@ jobs:
             # Create new version branch if it doesn't exist
             if ! git show-ref --verify --quiet refs/remotes/origin/"$TARGET_BRANCH"; then
               echo "Creating new version branch: $TARGET_BRANCH"
-              git checkout -b "$TARGET_BRANCH" "$LATEST_SEMVER"
+              git checkout -b "$TARGET_BRANCH" "origin/$LATEST_SEMVER"
               git push origin "$TARGET_BRANCH"
             fi
           fi
