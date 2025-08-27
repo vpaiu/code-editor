@@ -357,6 +357,14 @@ jobs:
           VERSION_NUMBER=$(echo "$CURRENT_TAG" | cut -d. -f1,2 | sed 's/\./\_/g')
           VSCODE_RELEASE_NOTES="https://code.visualstudio.com/updates/v$VERSION_NUMBER"
           
+          # Check if PR already exists
+          EXISTING_PR=$(gh pr list --head "${{ needs.update-automation.outputs.staging-branch }}" --json number --jq '.[0].number' || echo "")
+          
+          if [ -n "$EXISTING_PR" ]; then
+            echo "PR already exists for branch ${{ needs.update-automation.outputs.staging-branch }}: #$EXISTING_PR"
+            exit 0
+          fi
+          
           # Create PR
           PR_TITLE="Update VS Code to $CURRENT_TAG"
           PR_BODY="## Automated update of VS Code submodule to version $CURRENT_TAG
