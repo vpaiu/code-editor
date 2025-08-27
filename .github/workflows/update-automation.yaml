@@ -353,12 +353,12 @@ jobs:
           
           # Get release body and generate links
           RELEASE_BODY=$(gh api repos/microsoft/vscode/releases/tags/$CURRENT_TAG --template '{{.body}}')
-          VERSION_NUMBER=$(echo "$CURRENT_TAG" | sed 's/^v//' | sed 's/\./\_/g')
+          VERSION_NUMBER=$(echo "$CURRENT_TAG" | cut -d. -f1,2 | sed 's/\./\_/g')
           VSCODE_RELEASE_NOTES="https://code.visualstudio.com/updates/v$VERSION_NUMBER"
           
           # Create PR
           PR_TITLE="Update VS Code to $CURRENT_TAG"
-          PR_BODY="Automated update of VS Code submodule to version $CURRENT_TAG
+          PR_BODY="## Automated update of VS Code submodule to version $CURRENT_TAG
           
           Changes:
           - Updated third-party-src submodule to $CURRENT_TAG
