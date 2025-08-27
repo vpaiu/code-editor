@@ -365,8 +365,7 @@ jobs:
             --title "$PR_TITLE" \
             --body "$PR_BODY" \
             --base "$TARGET_BRANCH" \
-            --head "${{ needs.update-automation.outputs.staging-branch }}" \
-            --label "automated-update"
+            --head "${{ needs.update-automation.outputs.staging-branch }}"
             
           echo "Created PR from ${{ needs.update-automation.outputs.staging-branch }} to $TARGET_BRANCH"
 
