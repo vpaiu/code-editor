@@ -89,7 +89,7 @@ jobs:
             echo "Updating submodule to $LATEST_CODE_OSS_TAG"
             cd third-party-src
             git fetch --tags
-            git checkout "$INITIAL_CODE_OSS_TAG"
+            git checkout "$EXISTING_CODE_OSS_TAG"
             cd ..
             
             git add third-party-src
