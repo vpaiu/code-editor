@@ -308,8 +308,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          EXISTING_CODE_OSS_TAG="${{ needs.update-automation.outputs.existing-code-oss-tag }}"
-          LATEST_CODE_OSS_TAG="${{ needs.update-automation.outputs.latest-code-oss-tag }}"
+          # Check if PR already exists for this staging branch
+          EXISTING_PR=$(gh pr list --head "${{ needs.update-automation.outputs.staging-branch }}" --json number --jq '.[0].number' || echo "")
+          
+          if [ -n "$EXISTING_PR" ]; then
+            echo "PR already exists for branch ${{ needs.update-automation.outputs.staging-branch }}: #$EXISTING_PR"
+            exit 0
+          fi
+          
+          EXISTING_CODE_OSS_TAG="${{ needs.update-automation.outputs.initial-tag }}"
+          LATEST_CODE_OSS_TAG="${{ needs.update-automation.outputs.current-tag }}"
           
           # Parse version numbers
           EXISTING_CODE_OSS_MAJOR=$(echo "$EXISTING_CODE_OSS_TAG" | cut -d. -f1)
@@ -319,9 +327,6 @@ jobs:
           
           git fetch origin
           LATEST_SEMVER=$(git branch -r | grep -E 'origin/[0-9]+\.[0-9]+$' | sed 's/.*origin\///' | sort -V | tail -1)
-          
-          # Check if there's already a PR from a staging branch that would create a new version
-          STAGING_PRS=$(gh pr list --head-pattern "staging-code-editor-*" --json headRefName,baseRefName --jq '.[] | select(.baseRefName | test("^[0-9]+\\.[0-9]+$")) | .baseRefName' | sort -V | tail -1)
           
           if [ -n "$LATEST_SEMVER" ]; then
             LATEST_MAJOR=$(echo "$LATEST_SEMVER" | cut -d. -f1)
@@ -337,25 +342,18 @@ jobs:
             TARGET_BRANCH="$LATEST_SEMVER"
             echo "Patch update detected: targeting existing branch $TARGET_BRANCH"
           else
-            # Minor/major update
-            if [ -n "$STAGING_PRS" ]; then
-              # Use existing staging PR target branch
-              TARGET_BRANCH="$STAGING_PRS"
-              echo "Minor/major update detected: reusing existing staging PR target branch $TARGET_BRANCH"
-            else
-              # Create new branch
-              LATEST_MAJOR=$(echo "$LATEST_SEMVER" | cut -d. -f1)
-              LATEST_MINOR=$(echo "$LATEST_SEMVER" | cut -d. -f2)
-              NEW_MINOR=$((LATEST_MINOR + 1))
-              TARGET_BRANCH="$LATEST_MAJOR.$NEW_MINOR"
-              echo "Minor/major update detected: targeting new branch $TARGET_BRANCH"
-              
-              # Create new version branch if it doesn't exist
-              if ! git show-ref --verify --quiet refs/remotes/origin/"$TARGET_BRANCH"; then
-                echo "Creating new version branch: $TARGET_BRANCH"
-                git checkout -b "$TARGET_BRANCH" "origin/$LATEST_SEMVER"
-                git push origin "$TARGET_BRANCH"
-              fi
+            # Minor/major update - create new branch
+            LATEST_MAJOR=$(echo "$LATEST_SEMVER" | cut -d. -f1)
+            LATEST_MINOR=$(echo "$LATEST_SEMVER" | cut -d. -f2)
+            NEW_MINOR=$((LATEST_MINOR + 1))
+            TARGET_BRANCH="$LATEST_MAJOR.$NEW_MINOR"
+            echo "Minor/major update detected: targeting new branch $TARGET_BRANCH"
+            
+            # Create new version branch if it doesn't exist
+            if ! git show-ref --verify --quiet refs/remotes/origin/"$TARGET_BRANCH"; then
+              echo "Creating new version branch: $TARGET_BRANCH"
+              git checkout -b "$TARGET_BRANCH" "origin/$LATEST_SEMVER"
+              git push origin "$TARGET_BRANCH"
             fi
           fi
           
@@ -363,14 +361,6 @@ jobs:
           RELEASE_BODY=$(gh api repos/microsoft/vscode/releases/tags/$LATEST_CODE_OSS_TAG --template '{{.body}}')
           VERSION_NUMBER=$(echo "$LATEST_CODE_OSS_TAG" | cut -d. -f1,2 | sed 's/\./\_/g')
           VSCODE_RELEASE_NOTES="https://code.visualstudio.com/updates/v$VERSION_NUMBER"
-          
-          # Check if PR already exists
-          EXISTING_PR=$(gh pr list --head "${{ needs.update-automation.outputs.staging-branch }}" --json number --jq '.[0].number' || echo "")
-          
-          if [ -n "$EXISTING_PR" ]; then
-            echo "PR already exists for branch ${{ needs.update-automation.outputs.staging-branch }}: #$EXISTING_PR"
-            exit 0
-          fi
           
           # Create PR
           PR_TITLE="Update VS Code to $LATEST_CODE_OSS_TAG"
