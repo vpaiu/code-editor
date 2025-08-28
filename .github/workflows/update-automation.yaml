@@ -315,8 +315,8 @@ jobs:
             exit 0
           fi
           
-          EXISTING_CODE_OSS_TAG="${{ needs.update-automation.outputs.initial-tag }}"
-          LATEST_CODE_OSS_TAG="${{ needs.update-automation.outputs.current-tag }}"
+          EXISTING_CODE_OSS_TAG="${{ needs.update-automation.outputs.existing-code-oss-tag }}"
+          LATEST_CODE_OSS_TAG="${{ needs.update-automation.outputs.latest-code-oss-tag }}"
           
           # Parse version numbers
           EXISTING_CODE_OSS_MAJOR=$(echo "$EXISTING_CODE_OSS_TAG" | cut -d. -f1)
