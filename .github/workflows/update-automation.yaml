@@ -61,7 +61,7 @@ jobs:
           cd ..
           
           LATEST_CODE_OSS_TAG=$(gh api repos/microsoft/vscode/releases/latest --template '{{.tag_name}}')
-          
+          LATEST_CODE_OSS_TAG=1.101.2
           echo "EXISTING_CODE_OSS_TAG=$EXISTING_CODE_OSS_TAG" >> $GITHUB_ENV
           echo "LATEST_CODE_OSS_TAG=$LATEST_CODE_OSS_TAG" >> $GITHUB_ENV
           
