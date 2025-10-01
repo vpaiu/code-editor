@@ -31,7 +31,11 @@ copy_ignored_errors() {
             
             mkdir -p "$build_dir"
             echo "$clean_json" | jq '.' > "$build_dir/ignored-errors.json"
+        else
+            echo "Ignored errors file not found: $ignored_errors_file"
         fi
+    else
+        echo "Config file not found: $config_file"
     fi
 }
 
