@@ -10,13 +10,14 @@ copy_ignored_errors() {
     local build_target_base="$1"
     local target="$2"
     
-    local config_file="$(dirname "$0")/../configuration/${target}.json"
+    local present_working_dir="$(pwd)"
+    local config_file="$present_working_dir/configuration/$target.json"
     if [ -f "$config_file" ]; then
         local ignored_errors_path=$(jq -r '.ignoredErrors.path' "$config_file")
-        local ignored_errors_file="$(dirname "$0")/../${ignored_errors_path}/common-ignored-errors.json"
+        local ignored_errors_file="$present_working_dir/$ignored_errors_path/common-ignored-errors.json"
         
         if [ -f "$ignored_errors_file" ]; then
-            local build_dir="$(pwd)/${build_target_base}/out/vs/editor/common/errors"
+            local build_dir="$(pwd)/$build_target_base/out/vs/editor/common/errors"
             
             echo "Copying ignored errors to $build_dir"
             
