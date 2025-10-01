@@ -63,6 +63,7 @@ build() {
     env \
         NODE_OPTIONS="--max-old-space-size=${max_space_size_mb}" \
         npm run gulp "$build_target"
+    cd ..
 }
 
 main() {

@@ -47,9 +47,7 @@ jobs:
       
       - name: Build artifacts 
         run: |
-          cd ..
           ./scripts/build-artifacts.sh ${{ matrix.build-target }}
-          cd code-editor-src
       
       - name: Prepare artifacts to upload
         run: |
