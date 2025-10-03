@@ -404,6 +404,52 @@ jobs:
             
           echo "Created PR from ${{ needs.update-automation.outputs.staging-branch }} to $TARGET_BRANCH"
 
+  publish-release-lag-metric:
+    name: Publish Release Lag Metric
+    runs-on: ubuntu-latest
+    needs: [update-automation]
+    if: always()
+    environment: update-automation-workflow-env
+    permissions:
+      id-token: write # Required for OIDC
+      contents: read
+    env:
+      REPOSITORY: ${{ github.repository }}
+      AWS_ROLE_TO_ASSUME: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 1
+          
+      - name: Use role credentials for metrics
+        id: aws-creds
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
+          aws-region: us-east-1
+          
+      - name: Calculate and publish release lag metric
+        if: steps.aws-creds.outcome == 'success'
+        run: |
+          cd third-party-src
+          SUBMODULE_COMMIT_TIMESTAMP=$(git log -1 --format=%ct)
+          cd ..
+          
+          CURRENT_TIMESTAMP=$(date +%s)
+          SECONDS_BEHIND=$((CURRENT_TIMESTAMP - SUBMODULE_COMMIT_TIMESTAMP))
+          NORMALIZED_VALUE=$(awk "BEGIN {printf \"%.6f\", $SECONDS_BEHIND / 86400}") 
+          
+          aws cloudwatch put-metric-data \
+            --namespace "GitHub/Workflows" \
+            --metric-name "CodeOSSReleaseLag" \
+            --dimensions "Repository=${{ env.REPOSITORY }},Workflow=UpdateAutomation" \
+            --value $NORMALIZED_VALUE \
+            --unit None
+          
+          echo "Published metric: CodeOSSReleaseLag = $NORMALIZED_VALUE (equivalent to $NORMALIZED_VALUE days behind upstream)"
+
   send-notification:
     name: Send Notification
     runs-on: ubuntu-latest
@@ -434,7 +480,7 @@ jobs:
   publish-success-metrics:
     name: Publish Success Metrics
     runs-on: ubuntu-latest
-    needs: [update-automation, build-and-update-package-locks, generate-oss-attribution, create-pr, send-notification]
+    needs: [update-automation, build-and-update-package-locks, generate-oss-attribution, create-pr, send-notification, publish-release-lag-metric]
     environment: update-automation-workflow-env
     if: always() && !failure() && !cancelled()
     permissions:
@@ -463,7 +509,7 @@ jobs:
   publish-failure-metrics:
     name: Publish Failure Metrics
     runs-on: ubuntu-latest
-    needs: [update-automation, build-and-update-package-locks, generate-oss-attribution, create-pr, send-notification]
+    needs: [update-automation, build-and-update-package-locks, generate-oss-attribution, create-pr, send-notification, publish-release-lag-metric]
     environment: update-automation-workflow-env
     if: failure()
     permissions:
