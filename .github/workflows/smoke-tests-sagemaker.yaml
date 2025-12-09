@@ -2,6 +2,11 @@ name: Smoke Tests for SageMaker
 
 on: 
   workflow_dispatch:
+    inputs:
+      commit_sha:
+        description: 'Commit SHA to use for artifacts'
+        required: false
+        type: string
 
 jobs:
   smoke-tests-sagemaker:
@@ -12,11 +17,11 @@ jobs:
       id-token: write
       contents: read
     env:
-      COMMIT_SHA: ${{ github.sha }}
+      COMMIT_SHA: ${{ inputs.commit_sha || github.sha }}
       GH_REF_NAME: ${{ github.ref_name }}
       SAGEMAKER_ARTIFACT_PREFIX: "code-editor-sagemaker-server"
       GH_TOKEN: ${{ github.token }}
-      AWS_REGION: us-east-1
+      AWS_REGION: us-east-2
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
       ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
       PROJECT_NAME: ${{ secrets.PROJECT_NAME }}
@@ -284,157 +289,4 @@ jobs:
           
           echo "Started SageMaker space: $SAGEMAKER_SPACE_NAME"
       
-      - name: Fetch source artifact
-        run: |
-          gh run download --name "$COMMIT_SHA-code-editor-sagemaker-server-src"
-          ls -la
 
-          FILES=(
-              "$SAGEMAKER_ARTIFACT_PREFIX-src.tar.gz"
-          )
-          
-          # Check build artifact exists
-          for file in "${FILES[@]}"; do
-              if [ ! -f "$file" ]; then
-              echo "Error: $file not found for commit $COMMIT_SHA"
-              exit 1
-              fi
-          done
-
-          tar -xzf "$SAGEMAKER_ARTIFACT_PREFIX-src.tar.gz"
-          rm -rf $SAGEMAKER_ARTIFACT_PREFIX-src
-
-
-      - name: E2E testing
-        env:
-            SSO_USERNAME: ${{ secrets.SSO_USERNAME }}
-            SSO_PASSWORD: ${{ secrets.SSO_PASSWORD }}
-        run: |
-          # Waiting for app to be in service for 8 minutes
-          echo "Waiting for app to be in service..."
-          RETRY_COUNT=0
-          MAX_RETRIES=16
-          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-            APP_STATUS=$(aws sagemaker describe-app --domain-id "$SAGEMAKER_DOMAIN_ID" --space-name "$SAGEMAKER_SPACE_NAME" --app-type "CodeEditor" --app-name "default" --query 'Status' --output text 2>/dev/null || echo "NotFound")
-            echo "App status: $APP_STATUS (check $((RETRY_COUNT + 1))/$MAX_RETRIES)"
-            
-            if [ "$APP_STATUS" = "InService" ]; then
-              echo "App is running successfully"
-              break
-            elif [ "$APP_STATUS" = "Failed" ]; then
-              echo "App failed to start"
-              exit 1
-            elif [ "$APP_STATUS" = "Deleted" ]; then
-              echo "App was deleted"
-              exit 1
-            fi
-            
-            RETRY_COUNT=$((RETRY_COUNT + 1))
-            if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
-              sleep 30
-            fi
-          done
-          
-          if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
-            echo "Timeout waiting for app to be in service"
-            exit 1
-          fi
-          
-          DATAZONE_URL="https://${DATAZONE_DOMAIN_ID}.sagemaker.us-east-1.on.aws/projects/${PROJECT_ID}/compute?type=spaces"
-          
-          # Apply E2E testing patches
-
-          cd code-editor-src
-          rm -rf .pc
-          export QUILT_PATCHES=../patches/test 
-          export QUILT_SERIES=../patches/test/sagemaker-testing.series
-          quilt push -a -f
-  
-          # Run smoke tests with DataZone authentication
-          cd test/smoke
-          npm i
-          cd ..
-          npm install mocha
-          cd smoke
-          npm run compile
-          npx playwright install
-          SSO_USERNAME="$SSO_USERNAME" SSO_PASSWORD="$SSO_PASSWORD" DATAZONE_URL="$DATAZONE_URL" SPACE_NAME="$SAGEMAKER_SPACE_NAME" VSCODE_REMOTE_SERVER_PATH="sagemaker" npm run mocha -- --web --headless
-
-      - name: Clean up SageMaker resources
-        if: always()
-        run: |
-          echo "Starting SageMaker cleanup..."
-          CLEANUP_FAILED=0
-          
-          # Delete app first
-          echo "Deleting app..."
-          aws sagemaker delete-app \
-            --domain-id "$SAGEMAKER_DOMAIN_ID" \
-            --space-name "$SAGEMAKER_SPACE_NAME" \
-            --app-type "CodeEditor" \
-            --app-name "default" || CLEANUP_FAILED=1
-          
-          # Wait for app to be deleted
-          echo "Waiting for app to be deleted..."
-          RETRY_COUNT=0
-          MAX_RETRIES=10
-          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-            APP_STATUS=$(aws sagemaker describe-app --domain-id "$SAGEMAKER_DOMAIN_ID" --space-name "$SAGEMAKER_SPACE_NAME" --app-type "CodeEditor" --app-name "default" --query 'Status' --output text 2>/dev/null || echo "Deleted")
-            echo "App status: $APP_STATUS"
-            if [ "$APP_STATUS" = "Deleted" ]; then
-              break
-            fi
-            RETRY_COUNT=$((RETRY_COUNT + 1))
-            sleep 10
-          done
-          
-          # Delete space
-          echo "Deleting space..."
-          aws sagemaker delete-space \
-            --domain-id "$SAGEMAKER_DOMAIN_ID" \
-            --space-name "$SAGEMAKER_SPACE_NAME" || CLEANUP_FAILED=1
-          
-          # Remove image from domain
-          echo "Removing image from domain..."
-          EXISTING_IMAGES=$(aws sagemaker describe-domain --domain-id "$SAGEMAKER_DOMAIN_ID" --query 'DefaultUserSettings.CodeEditorAppSettings.CustomImages' --output json 2>/dev/null || echo '[]')
-          FILTERED_IMAGES=$(echo "$EXISTING_IMAGES" | jq --arg imageName "$SAGEMAKER_IMAGE_NAME" 'map(select(.ImageName != $imageName))')
-          aws sagemaker update-domain \
-            --domain-id "$SAGEMAKER_DOMAIN_ID" \
-            --default-user-settings "{\"CodeEditorAppSettings\": {\"CustomImages\": $FILTERED_IMAGES}}" || CLEANUP_FAILED=1
-          
-          # Delete SageMaker image version
-          echo "Deleting SageMaker image version..."
-          aws sagemaker delete-image-version \
-            --image-name "$SAGEMAKER_IMAGE_NAME" \
-            --version 1 || CLEANUP_FAILED=1
-          
-          # Delete SageMaker image
-          echo "Deleting SageMaker image..."
-          aws sagemaker delete-image \
-            --image-name "$SAGEMAKER_IMAGE_NAME" || CLEANUP_FAILED=1
-          
-          if [ $CLEANUP_FAILED -eq 1 ]; then
-            echo "SageMaker cleanup completed with some failures"
-          else
-            echo "SageMaker cleanup completed successfully"
-          fi
-
-      - name: Configure ECR role for cleanup
-        if: always()
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.TEST_ECR_ROLE }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Clean up ECR resources
-        if: always()
-        run: |
-          echo "Starting ECR cleanup..."
-          BRANCH_NAME=$(echo "$GH_REF_NAME" | sed 's/[^a-zA-Z0-9-]/-/g')
-          IMAGE_TAG="$BRANCH_NAME-$COMMIT_SHA"
-          aws ecr batch-delete-image \
-            --repository-name "$ECR_REPOSITORY" \
-            --image-ids imageTag="$IMAGE_TAG" || echo "ECR cleanup failed"
-          
-          echo "ECR cleanup completed"
-            
