@@ -10,7 +10,7 @@ jobs:
     permissions:
       contents: write  # Required for creating releases
     env:
-      COMMIT_SHA: ${{ github.sha }}
+      COMMIT_SHA: "f94909abbf760f6e6a75b2351b7bafb1bb19cfea"
       VERSION_NUM: ${{ github.event.inputs.version || github.ref_name }}
       SAGEMAKER_ARTIFACT_PREFIX: "code-editor-sagemaker-server"
       GH_TOKEN: ${{ github.token }}
