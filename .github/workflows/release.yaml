@@ -90,6 +90,13 @@ jobs:
       
       - name: Create GitHub release
         run: |
+          # Check if this is a release candidate
+          PRERELEASE_FLAG=""
+          if echo "$VERSION_NUM" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+$'; then
+            PRERELEASE_FLAG="--prerelease"
+            echo "Detected release candidate version, will mark as prerelease"
+          fi
+          
           # Check if release already exists. Needed when release created via new release in guthub ui
           if gh release view "$VERSION_NUM" > /dev/null 2>&1; then
             echo "Release for tag $VERSION_NUM already exists, uploading additional assets..."
@@ -98,7 +105,8 @@ jobs:
             echo "Creating new release for tag $VERSION_NUM..."
             gh release create "$VERSION_NUM" ./*.tar.gz \
               --title "Release $VERSION_NUM" \
-              --notes "Release $VERSION_NUM"
+              --notes "Release $VERSION_NUM" \
+              $PRERELEASE_FLAG
           fi
   handle-failures:
     name: Handle Failures
