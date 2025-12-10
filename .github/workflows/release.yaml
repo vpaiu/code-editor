@@ -10,7 +10,8 @@ jobs:
     permissions:
       contents: write  # Required for creating releases
     env:
-      COMMIT_SHA: "f94909abbf760f6e6a75b2351b7bafb1bb19cfea"
+      COMMIT_SHA: ${{ github.sha }}
+      COMMIT_SHA_FOR_ARTIFACT: "f94909abbf760f6e6a75b2351b7bafb1bb19cfea"
       VERSION_NUM: ${{ github.event.inputs.version || github.ref_name }}
       SAGEMAKER_ARTIFACT_PREFIX: "code-editor-sagemaker-server"
       GH_TOKEN: ${{ github.token }}
@@ -39,28 +40,28 @@ jobs:
 
       - name: Download sagemaker artifacts by commit ID
         run: |
-          gh run download --name "$COMMIT_SHA-code-editor-sagemaker-server-build" --name "$COMMIT_SHA-code-editor-sagemaker-server-src"
+          gh run download --name "$COMMIT_SHA_FOR_ARTIFACT-code-editor-sagemaker-server-build" --name "$COMMIT_SHA_FOR_ARTIFACT-code-editor-sagemaker-server-src"
 
       - name: Check artifacts exist
         run: |
           ls -la
 
           FILES=(
-            "$COMMIT_SHA-$SAGEMAKER_ARTIFACT_PREFIX-build/$SAGEMAKER_ARTIFACT_PREFIX-build.tar.gz"
-            "$COMMIT_SHA-$SAGEMAKER_ARTIFACT_PREFIX-src/$SAGEMAKER_ARTIFACT_PREFIX-src.tar.gz"
+            "$COMMIT_SHA_FOR_ARTIFACT-$SAGEMAKER_ARTIFACT_PREFIX-build/$SAGEMAKER_ARTIFACT_PREFIX-build.tar.gz"
+            "$COMMIT_SHA_FOR_ARTIFACT-$SAGEMAKER_ARTIFACT_PREFIX-src/$SAGEMAKER_ARTIFACT_PREFIX-src.tar.gz"
           )
           
           # Check build artifact exists
           for file in "${FILES[@]}"; do
             if [ ! -f "$file" ]; then
-              echo "Error: $file not found for commit $COMMIT_SHA"
+              echo "Error: $file not found for commit $COMMIT_SHA_FOR_ARTIFACT"
               exit 1
             fi
           done
 
       - name: Update Code Editor version
         run: |
-          tar xzf "$COMMIT_SHA-$SAGEMAKER_ARTIFACT_PREFIX-src/$SAGEMAKER_ARTIFACT_PREFIX-src.tar.gz"
+          tar xzf "$COMMIT_SHA_FOR_ARTIFACT-$SAGEMAKER_ARTIFACT_PREFIX-src/$SAGEMAKER_ARTIFACT_PREFIX-src.tar.gz"
           cd code-editor-src
           CURRENT_VERSION=$(jq -r '.codeEditorVersion' product.json)
           jq ".codeEditorVersion = \"$VERSION_NUM\"" product.json > temp.json && mv temp.json product.json
@@ -68,7 +69,7 @@ jobs:
           tar -czf "code-editor-sagemaker-src-$VERSION_NUM.tar.gz" code-editor-src/
           rm -rf code-editor-src
           
-          tar xzf "$COMMIT_SHA-$SAGEMAKER_ARTIFACT_PREFIX-build/$SAGEMAKER_ARTIFACT_PREFIX-build.tar.gz"
+          tar xzf "$COMMIT_SHA_FOR_ARTIFACT-$SAGEMAKER_ARTIFACT_PREFIX-build/$SAGEMAKER_ARTIFACT_PREFIX-build.tar.gz"
           cd vscode-reh-web-linux-x64
 
           # Update Code Editor Version in all files
