@@ -125,7 +125,9 @@ jobs:
             echo "Creating new release for tag $CODE_EDITOR_VERSION..."
             gh release create "$CODE_EDITOR_VERSION" ./*.tar.gz \
               --title "Release $CODE_EDITOR_VERSION" \
-              --notes "Release $CODE_EDITOR_VERSION\n\nSageMaker Code Editor Version: $SAGEMAKER_VERSION" \
+              --notes "Release $CODE_EDITOR_VERSION
+
+              SageMaker Code Editor Version: $SAGEMAKER_VERSION" \
               $PRERELEASE_FLAG
           fi
   handle-failures:
