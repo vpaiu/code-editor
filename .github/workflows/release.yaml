@@ -27,7 +27,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Validate versions and tag
+      - name: Validate versions and create tag
         run: |
           if ! echo "$CODE_EDITOR_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$'; then
             echo "Code Editor version $CODE_EDITOR_VERSION does not follow semantic version pattern (x.y.z) or x.y.z-rc.N. Skipping release."
@@ -36,10 +36,13 @@ jobs:
           echo "Code Editor version $CODE_EDITOR_VERSION is valid"
           echo "SageMaker Code Editor version $SAGEMAKER_VERSION will be mapped"
           
-          # Verify tag exists and matches the version
-          if ! git rev-parse "$CODE_EDITOR_VERSION" >/dev/null 2>&1; then
-            echo "Error: Tag $CODE_EDITOR_VERSION does not exist. Create it first with: git tag $CODE_EDITOR_VERSION. Skipping release."
-            exit 1
+          # Check if tag already exists
+          if git rev-parse "$CODE_EDITOR_VERSION" >/dev/null 2>&1; then
+            echo "Tag $CODE_EDITOR_VERSION already exists"
+          else
+            echo "Creating tag $CODE_EDITOR_VERSION on current commit"
+            git tag "$CODE_EDITOR_VERSION"
+            git push origin "$CODE_EDITOR_VERSION"
           fi
           
           # Get commit SHA from tag and export it
