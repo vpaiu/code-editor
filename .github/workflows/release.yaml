@@ -92,6 +92,7 @@ jobs:
           tar xzf "$COMMIT_SHA-$SAGEMAKER_ARTIFACT_PREFIX-build/$SAGEMAKER_ARTIFACT_PREFIX-build.tar.gz"
           cd vscode-reh-web-linux-x64
 
+          CURRENT_SM_VERSION=$(jq -r '.sagemakerCodeEditorVersion' product.json)
           jq ".codeEditorVersion = \"$CODE_EDITOR_VERSION\" | .sagemakerCodeEditorVersion = \"$SAGEMAKER_VERSION\"" product.json > temp.json && mv temp.json product.json
           
           FILES_TO_UPDATE=(
@@ -101,7 +102,8 @@ jobs:
             "out/vs/workbench/api/node/extensionHostProcess.js"
           )
           for file in "${FILES_TO_UPDATE[@]}"; do
-            sed -i "s/codeEditorVersion:\"$CURRENT_CE_VERSION\"/codeEditorVersion:\"$CODE_EDITOR_VERSION\",sagemakerCodeEditorVersion:\"$SAGEMAKER_VERSION\"/g" "$file"
+            sed -i "s/codeEditorVersion:\s*\"$CURRENT_CE_VERSION\"/codeEditorVersion:\"$CODE_EDITOR_VERSION\"/g" "$file"
+            sed -i "s/sagemakerCodeEditorVersion:\s*\"$CURRENT_SM_VERSION\"/sagemakerCodeEditorVersion:\"$SAGEMAKER_VERSION\"/g" "$file"
           done
 
           cd ..
