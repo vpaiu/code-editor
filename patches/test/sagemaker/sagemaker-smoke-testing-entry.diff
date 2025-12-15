@@ -196,7 +196,15 @@ Index: code-editor-src/test/smoke/src/main.ts
  import { setup as setupDataLossTests } from './areas/workbench/data-loss.test';
  import { setup as setupPreferencesTests } from './areas/preferences/preferences.test';
  import { setup as setupSearchTests } from './areas/search/search.test';
-@@ -118,23 +111,10 @@ try {
+@@ -22,7 +15,6 @@ import { setup as setupNotebookTests } f
+ import { setup as setupLanguagesTests } from './areas/languages/languages.test';
+ import { setup as setupStatusbarTests } from './areas/statusbar/statusbar.test';
+ import { setup as setupExtensionTests } from './areas/extensions/extensions.test';
+-import { setup as setupMultirootTests } from './areas/multiroot/multiroot.test';
+ import { setup as setupLocalizationTests } from './areas/workbench/localization.test';
+ import { setup as setupLaunchTests } from './areas/workbench/launch.test';
+ import { setup as setupTerminalTests } from './areas/terminal/terminal.test';
+@@ -118,23 +110,10 @@ try {
  	logger.log(`Error enabling graceful-fs: ${error}`);
  }
  
@@ -221,7 +229,7 @@ Index: code-editor-src/test/smoke/src/main.ts
  
  function fail(errorMessage): void {
  	logger.log(errorMessage);
-@@ -211,7 +191,10 @@ else {
+@@ -211,7 +190,10 @@ else {
  	const testCodeServerPath = opts.build || process.env.VSCODE_REMOTE_SERVER_PATH;
  
  	if (typeof testCodeServerPath === 'string') {
@@ -233,7 +241,7 @@ Index: code-editor-src/test/smoke/src/main.ts
  			fail(`Cannot find Code server at ${testCodeServerPath}.`);
  		} else {
  			logger.log(`Running web smoke tests against ${testCodeServerPath}`);
-@@ -233,121 +216,6 @@ logger.log(`VS Code product quality: ${q
+@@ -233,121 +215,6 @@ logger.log(`VS Code product quality: ${q
  
  const userDataDir = path.join(testDataPath, 'd');
  
@@ -355,7 +363,7 @@ Index: code-editor-src/test/smoke/src/main.ts
  // Before all tests run setup
  before(async function () {
  	this.timeout(5 * 60 * 1000); // increase since we download VSCode
-@@ -371,31 +239,6 @@ before(async function () {
+@@ -371,31 +238,6 @@ before(async function () {
  		extraArgs: (opts.electronArgs || '').split(' ').map(arg => arg.trim()).filter(arg => !!arg)
  	};
  
@@ -387,6 +395,14 @@ Index: code-editor-src/test/smoke/src/main.ts
  });
  
  describe(`VSCode Smoke Tests (${opts.web ? 'Web' : 'Electron'})`, () => {
+@@ -408,7 +250,6 @@ describe(`VSCode Smoke Tests (${opts.web
+ 	setupTaskTests(logger);
+ 	setupStatusbarTests(logger);
+ 	if (quality !== Quality.Dev && quality !== Quality.OSS) { setupExtensionTests(logger); }
+-	setupMultirootTests(logger);
+ 	if (!opts.web && !opts.remote && quality !== Quality.Dev && quality !== Quality.OSS) { setupLocalizationTests(logger); }
+ 	if (!opts.web && !opts.remote) { setupLaunchTests(logger); }
+ });
 Index: code-editor-src/test/automation/src/code.ts
 ===================================================================
 --- code-editor-src.orig/test/automation/src/code.ts
